@@ -125,7 +125,7 @@ def printFeatureImages(featureImages, naming, printlocation):
     i =0
     for image in featureImages:
         # Normalize to intensity values
-        imageToPrint = cv2.normalize(image, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        imageToPrint = cv2.normalize(image, image, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
         cv2.imwrite(printlocation + "\\" + naming + str(i) + ".png", imageToPrint)
         i+=1
 

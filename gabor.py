@@ -95,7 +95,7 @@ def getLambdaValues(img):
     radialFrequencies.append(max)
     lambdaVals = []
     for freq in radialFrequencies:
-        lambdaVals.append(width/freq)   
+        lambdaVals.append(width/freq)
     return lambdaVals
 
 # The activation function with gaussian smoothing
