@@ -1,4 +1,3 @@
-
 import math
 import sklearn.cluster as clstr
 import cv2

@@ -4,7 +4,8 @@ import math
 import _utils
 import argparse
 import os.path
-
+import glob
+import os
 # A simple convolution function that returns the filtered images.
 def getFilterImages(filters, img):
     """
@@ -249,7 +250,7 @@ def removeFeatureImagesWithSmallVariance(featureImages, threshold):
 
 
 # Our main driver function to return the segmentation of the input image.
-def runGabor(args):
+def runGabor(infile, outfile, k, gk, M, **args):
 
     infile = args.infile
     if(not os.path.isfile(infile)):
@@ -322,12 +323,12 @@ def main():
     parser = argparse.ArgumentParser()
 
     # Required arguments
-    parser.add_argument("-infile", required=True)
-    parser.add_argument("-outfile", required=True)
+    # parser.add_argument("-infile", required=True)
+    # parser.add_argument("-outfile", required=True)
 
-    parser.add_argument('-k', help='Number of clusters', type=_utils.check_positive_int, required=True)
-    parser.add_argument('-gk', help='Size of the gabor kernel', type=_utils.check_positive_int, required=True)
-    parser.add_argument('-M', help='Size of the gaussian window', type=_utils.check_positive_int, required=True)
+    # parser.add_argument('-k', help='Number of clusters', type=_utils.check_positive_int, required=True)
+    # parser.add_argument('-gk', help='Size of the gabor kernel', type=_utils.check_positive_int, required=True)
+    # parser.add_argument('-M', help='Size of the gaussian window', type=_utils.check_positive_int, required=True)
 
     # Optional arguments
     parser.add_argument('-spw', help='Spatial weight of the row and columns for clustering, DEFAULT = 1', nargs='?', const=1,
@@ -352,7 +353,21 @@ def main():
                         type=bool, required=False)
 
     args = parser.parse_args()
-    runGabor(args)
+
+    IMG_ROOT = "../ARC_DATAS_RESIZE/QUARTER"
+    SAVE_ROOT = "../ARC_GABOR_OUTPUT/QUARTER"
+    img_path_list = sorted(glob.glob(IMG_ROOT + "/*/*.jpg"))
+
+    k = 16
+    gk = 17
+    M = 35
+    for img_path in img_path_list:
+        foldername = os.path.basename(os.path.dirname(img_path))
+        filename = os.path.basename(img_path)[:-4]
+        save_dir = os.path.join(SAVE_ROOT, foldername)
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, filename + "_result.jpg")
+        runGabor(img_path, save_path, k, gk, M, **args)
 
 if __name__ == "__main__": 
     main()
