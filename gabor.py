@@ -159,6 +159,17 @@ def getLambdaValues(img):
 
 # The activation function with gaussian smoothing
 def nonLinearTransducer(img, gaborImages, L, sigmaWeight, filters):
+    """
+    画像の非線形変換を行う関数．
+
+    input
+    -----
+    img: 
+    入力画像
+    gaborImages: list
+    選択後のガボールフィルタ画像
+
+    """
 
     alpha_ = 0.25
     featureImages = []
@@ -286,15 +297,20 @@ def runGabor(args):
         _utils.printFeatureImages(filteredImages, "filter", printlocation)
 
     print("Applying nonlinear transduction with Gaussian smoothing")
+
     featureImages = nonLinearTransducer(img, filteredImages, M_transducerWindowSize, sigmaWeight, filters)
+    # 分散の小さいデータを除く．
     featureImages = removeFeatureImagesWithSmallVariance(featureImages, variance_Threshold)
 
     if (printIntermediateResults):
         _utils.printFeatureImages(featureImages, "feature", printlocation)
 
+    # 特徴ベクトルの作成．
     featureVectors = _utils.constructFeatureVectors(featureImages, img)
+    # 特徴ベクトルの保存
+    _utils.printFeatureVectors("aaa", featureVectors)
     featureVectors = _utils.normalizeData(featureVectors, False, spatialWeight=spatialWeight)
-
+    
     print("Clustering...")
     labels = _utils.clusterFeatureVectors(featureVectors, k_clusters)
     _utils.printClassifiedImage(labels, k_clusters, img, outfile, greyOutput)
