@@ -46,6 +46,7 @@ def filterSelection(featureImages, threshold, img, howManyFilterImages):
 # This is where we create the gabor kernel
 # Feel free to uncomment the other list of theta values for testing.
 def build_filters(lambdas, ksize, gammaSigmaPsi):
+    
 
     filters = []
     thetas = []
@@ -72,6 +73,17 @@ def build_filters(lambdas, ksize, gammaSigmaPsi):
 # Here is where we convert radial frequencies to wavelengths.
 # Feel free to uncomment the other list of lambda values for testing.
 def getLambdaValues(img):
+    """
+    入力画像からwavelengthを決める．
+    input
+    ------
+    img: 入力画像
+
+    output
+    -----
+    lambdaVals: list
+    - λの値
+    """
     height, width = img.shape
 
     #calculate radial frequencies.
@@ -194,8 +206,9 @@ def runGabor(args):
     if((M_transducerWindowSize % 2) == 0):
         print('Gaussian window size not odd, using next odd number')
         M_transducerWindowSize += 1
-
+    # クラスタ数．何個に画像を分割するか
     k_clusters = args.k
+    # ガボールフィルタのサイズ
     k_gaborSize = args.gk
 
     spatialWeight = args.spw
@@ -209,9 +222,11 @@ def runGabor(args):
     sigmaWeight = args.siw
     greyOutput = args.c
     printIntermediateResults = args.i 
-
+    # 画像の読み込み
     img = cv2.imread(infile, cv2.IMREAD_GRAYSCALE)
+    # lambdaの取得.サンプリングレートを決める．
     lambdas = getLambdaValues(img)
+    # ガボールフィルタの作成
     filters = build_filters(lambdas, k_gaborSize, gammaSigmaPsi)
 
     print("Gabor kernels created, getting filtered images")
@@ -273,5 +288,5 @@ def main():
     args = parser.parse_args()
     runGabor(args)
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     main()

@@ -33,4 +33,25 @@ def resize_image():
 
 
 if __name__ == "__main__":
+     # リサイズ
+    ROOT = "../ARC_DATAS"
+    ARC_DATAS_CROP = "../ARC_DATAS_CROP"
+    folderlist = glob.glob(ROOT + "/arcKG*")
+
+    for folder in tqdm(folderlist):
+        foldername = os.path.basename(folder)
+        arc_crop_folder = os.path.join(ARC_DATAS_CROP, foldername)
+        # 画像のフォルダ作成
+        os.makedirs(arc_crop_folder, exist_ok=True)
+        pathlist = sorted(glob.glob(folder + "/*.jpg"))
+        for path in pathlist:    
+            filename = os.path.basename(path)
+            ori_img = cv2.imread(path)
+            h, w, c = ori_img.shape[:3]
+            c_x = w//2
+            c_y = h // 2
+            crop_img = ori_img[c_y: c_y + 256, c_x: c_x + 256]
+
+            # save image
+            cv2.imwrite(os.path.join(arc_crop_folder, filename), crop_img)
     
