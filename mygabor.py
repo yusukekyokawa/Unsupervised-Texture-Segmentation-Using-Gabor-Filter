@@ -370,4 +370,5 @@ def main():
         runGabor(img_path, save_path, k, gk, M, **args)
 
 if __name__ == "__main__": 
+    print("AAAA")
     main()
