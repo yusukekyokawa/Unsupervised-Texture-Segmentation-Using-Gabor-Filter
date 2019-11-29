@@ -7,6 +7,21 @@ import os.path
 
 # A simple convolution function that returns the filtered images.
 def getFilterImages(filters, img):
+    """
+    ガボールフィルタを画像にかけて，出力の画像を返す・．
+
+    input
+    -----
+    filters: list
+    ガボールフィルタが格納されたリスト
+    img: ndarray
+    入力画像
+
+    output
+    -----
+    featureaImages: list
+    フィルタ適用後の画像のリスト
+    """
     featureImages = []
     for filter in filters:
         kern, params = filter
@@ -15,8 +30,24 @@ def getFilterImages(filters, img):
     return featureImages
 
 # Apply the R^2 threshold technique here, note we find energy in the spatial domain.
+# TODO: このへんがよくわからない！
 def filterSelection(featureImages, threshold, img, howManyFilterImages):
+    """
+    エネルギー計算をして，画像の特徴を捉えたフィルターを計算する．
 
+    input
+    -----
+    featureImages: list
+    フィルタをかけた後の画像群
+
+    threshold: 
+    論文中では0.95．
+    これを超えるフィルタ画像のサブセットが最もよく画像の特徴を捉えているとされている．
+    img: 
+    入力画像
+    howManyFilterImages: int
+    何枚の画像を選ぶか．デフォルトで100
+    """
     idEnergyList = []
     id = 0
     height, width = img.shape
@@ -28,7 +59,7 @@ def filterSelection(featureImages, threshold, img, howManyFilterImages):
         idEnergyList.append((thisEnergy, id))
         id += 1
     E = 0.0
-    for E_i in idEnergyList:
+    for E_i in  idEnergyList:
         E += E_i[0]
     sortedlist = sorted(idEnergyList, key=lambda energy: energy[0], reverse = True)
 
@@ -46,7 +77,23 @@ def filterSelection(featureImages, threshold, img, howManyFilterImages):
 # This is where we create the gabor kernel
 # Feel free to uncomment the other list of theta values for testing.
 def build_filters(lambdas, ksize, gammaSigmaPsi):
-    
+    """
+
+    input
+    -----
+    lambdas: 
+
+    ksize: int
+    フィルタのサイズ
+
+    gammaSigmaPsi: list
+    ガボールフィルタのパラメタ
+
+    output
+    -----
+    filters: list
+    ガボールフィルタが格納されたリスト
+    """
 
     filters = []
     thetas = []
@@ -230,7 +277,10 @@ def runGabor(args):
     filters = build_filters(lambdas, k_gaborSize, gammaSigmaPsi)
 
     print("Gabor kernels created, getting filtered images")
+
+    # ガボールフィルタを入力画像にかける．
     filteredImages = getFilterImages(filters, img)
+    # どのフィルタを利用するか選ぶ
     filteredImages = filterSelection(filteredImages, R_threshold, img, howManyFeatureImages)
     if(printIntermediateResults):
         _utils.printFeatureImages(filteredImages, "filter", printlocation)
