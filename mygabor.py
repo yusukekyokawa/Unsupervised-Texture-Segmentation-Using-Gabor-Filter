@@ -6,7 +6,9 @@ import argparse
 import os.path
 import glob
 import os
+from tqdm import tqdm
 # A simple convolution function that returns the filtered images.
+@_utils.stop_watch
 def getFilterImages(filters, img):
     """
     ガボールフィルタを画像にかけて，出力の画像を返す・．
@@ -32,6 +34,7 @@ def getFilterImages(filters, img):
 
 # Apply the R^2 threshold technique here, note we find energy in the spatial domain.
 # TODO: このへんがよくわからない！
+@_utils.stop_watch
 def filterSelection(featureImages, threshold, img, howManyFilterImages):
     """
     エネルギー計算をして，画像の特徴を捉えたフィルターを計算する．
@@ -77,6 +80,7 @@ def filterSelection(featureImages, threshold, img, howManyFilterImages):
 
 # This is where we create the gabor kernel
 # Feel free to uncomment the other list of theta values for testing.
+@_utils.stop_watch
 def build_filters(lambdas, ksize, gammaSigmaPsi):
     """
 
@@ -120,6 +124,7 @@ def build_filters(lambdas, ksize, gammaSigmaPsi):
 
 # Here is where we convert radial frequencies to wavelengths.
 # Feel free to uncomment the other list of lambda values for testing.
+@_utils.stop_watch
 def getLambdaValues(img):
     """
     入力画像からwavelengthを決める．
@@ -159,6 +164,7 @@ def getLambdaValues(img):
     return lambdaVals
 
 # The activation function with gaussian smoothing
+@_utils.stop_watch
 def nonLinearTransducer(img, gaborImages, L, sigmaWeight, filters):
     """
     画像の非線形変換を行う関数．
@@ -218,6 +224,7 @@ def centralPixelTangentCalculation_bruteForce(img, copy, row, col, alpha, L):
     copy[row][col] = sum/pow(L, 2)
 
 # Apply Gaussian with the central frequency specification
+@_utils.stop_watch
 def applyGaussian(gaborImage, L, sigmaWeight, filter):
 
     height, N_c = gaborImage.shape
@@ -252,35 +259,36 @@ def removeFeatureImagesWithSmallVariance(featureImages, threshold):
 # Our main driver function to return the segmentation of the input image.
 def runGabor(infile, outfile, k, gk, M, **args):
 
-    infile = args.infile
+    # infile = args.infile
     if(not os.path.isfile(infile)):
         print(infile, ' is not a file!')
         exit(0)
 
-    outfile = args.outfile
-    printlocation = os.path.dirname(os.path.abspath(outfile))
+    # outfile = args.outfile
+    printlocation = os.path.dirname(outfile)
     _utils.deleteExistingSubResults(printlocation)
 
-    M_transducerWindowSize = args.M
+    M_transducerWindowSize = M
     if((M_transducerWindowSize % 2) == 0):
         print('Gaussian window size not odd, using next odd number')
         M_transducerWindowSize += 1
     # クラスタ数．何個に画像を分割するか
-    k_clusters = args.k
+    k_clusters = k
     # ガボールフィルタのサイズ
-    k_gaborSize = args.gk
+    k_gaborSize = gk
 
-    spatialWeight = args.spw
+    # 各種引数設定
+    spatialWeight = args['spw']
     gammaSigmaPsi = []
-    gammaSigmaPsi.append(args.gamma)
-    gammaSigmaPsi.append(args.sigma)
-    gammaSigmaPsi.append(args.psi)
-    variance_Threshold = args.vt
-    howManyFeatureImages = args.fi
-    R_threshold = args.R
-    sigmaWeight = args.siw
-    greyOutput = args.c
-    printIntermediateResults = args.i 
+    gammaSigmaPsi.append(args['gamma'])
+    gammaSigmaPsi.append(args['sigma'])
+    gammaSigmaPsi.append(args['psi'])
+    variance_Threshold = args['vt']
+    howManyFeatureImages = args['fi']
+    R_threshold = args['R']
+    sigmaWeight = args['siw']
+    greyOutput = args['c']
+    printIntermediateResults = args['i'] 
     # 画像の読み込み
     img = cv2.imread(infile, cv2.IMREAD_GRAYSCALE)
     # lambdaの取得.サンプリングレートを決める．
@@ -294,8 +302,9 @@ def runGabor(infile, outfile, k, gk, M, **args):
     filteredImages = getFilterImages(filters, img)
     # どのフィルタを利用するか選ぶ
     filteredImages = filterSelection(filteredImages, R_threshold, img, howManyFeatureImages)
+
     if(printIntermediateResults):
-        _utils.printFeatureImages(filteredImages, "filter", printlocation)
+        _utils.printFeatureImages(filteredImages, "filter", printlocation, infile)
 
     print("Applying nonlinear transduction with Gaussian smoothing")
 
@@ -303,14 +312,15 @@ def runGabor(infile, outfile, k, gk, M, **args):
     # 分散の小さいデータを除く．
     featureImages = removeFeatureImagesWithSmallVariance(featureImages, variance_Threshold)
 
+
     if (printIntermediateResults):
-        _utils.printFeatureImages(featureImages, "feature", printlocation)
+        _utils.printFeatureImages(featureImages, "feature", printlocation, infile)
 
     # 特徴ベクトルの作成．
     featureVectors = _utils.constructFeatureVectors(featureImages, img)
     # 特徴ベクトルの保存
-    _utils.printFeatureVectors("aaa", featureVectors)
     featureVectors = _utils.normalizeData(featureVectors, False, spatialWeight=spatialWeight)
+    _utils.printFeatureVectors(printlocation, infile, featureVectors)
     
     print("Clustering...")
     labels = _utils.clusterFeatureVectors(featureVectors, k_clusters)
@@ -320,7 +330,7 @@ def runGabor(infile, outfile, k, gk, M, **args):
 def main():
 
     # initialize
-    parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
 
     # Required arguments
     # parser.add_argument("-infile", required=True)
@@ -330,38 +340,41 @@ def main():
     # parser.add_argument('-gk', help='Size of the gabor kernel', type=_utils.check_positive_int, required=True)
     # parser.add_argument('-M', help='Size of the gaussian window', type=_utils.check_positive_int, required=True)
 
-    # Optional arguments
-    parser.add_argument('-spw', help='Spatial weight of the row and columns for clustering, DEFAULT = 1', nargs='?', const=1,
-                        type=_utils.check_positive_float, default=1, required=False)
-    parser.add_argument('-gamma', help='Spatial aspect ratio, DEFAULT = 1', nargs='?', const=1, default=1,
-                        type=_utils.check_positive_float, required=False)
-    parser.add_argument('-sigma', help='Spread of the filter, DEFAULT = 1', nargs='?', const=1, default=1,
-                        type=_utils.check_positive_float, required=False)
-    parser.add_argument('-psi', help='Offset phase, DEFAULT = 0', nargs='?', const=0, default=0,
-                        type=_utils.check_positive_float, required=False)
-    parser.add_argument('-vt', help='Variance Threshold, DEFAULT = 0.0001', nargs='?', const=0.0001, default=0.0001,
-                        type=_utils.check_positive_float, required=False)
-    parser.add_argument('-fi', help='Maximum number of feature images wanted, DEFAULT = 100', nargs='?', const=100, default=100,
-                        type=_utils.check_positive_int, required=False)
-    parser.add_argument('-R', help='Energy R threshold, DEFAULT = 0.95', nargs='?', const=0.95, default=0.95,
-                        type=_utils.check_positive_float, required=False)
-    parser.add_argument('-siw', help='Sigma weight for gaussian smoothing, DEFAULT = 0.5', nargs='?', const=0.5, default=0.5,
-                        type=float, required=False)
-    parser.add_argument('-c', help='Output grey? True/False, DEFAULT = False', nargs='?', const=False, default=False,
-                        type=bool, required=False)
-    parser.add_argument('-i', help='Print intermediate results (filtered/feature images)? True/False, DEFAULT = False', nargs='?', const=False, default=False,
-                        type=bool, required=False)
+    # # Optional arguments
+    # parser.add_argument('-spw', help='Spatial weight of the row and columns for clustering, DEFAULT = 1', nargs='?', const=1,
+    #                     type=_utils.check_positive_float, default=1, required=False)
+    # parser.add_argument('-gamma', help='Spatial aspect ratio, DEFAULT = 1', nargs='?', const=1, default=1,
+    #                     type=_utils.check_positive_float, required=False)
+    # parser.add_argument('-sigma', help='Spread of the filter, DEFAULT = 1', nargs='?', const=1, default=1,
+    #                     type=_utils.check_positive_float, required=False)
+    # parser.add_argument('-psi', help='Offset phase, DEFAULT = 0', nargs='?', const=0, default=0,
+    #                     type=_utils.check_positive_float, required=False)
+    # parser.add_argument('-vt', help='Variance Threshold, DEFAULT = 0.0001', nargs='?', const=0.0001, default=0.0001,
+    #                     type=_utils.check_positive_float, required=False)
+    # parser.add_argument('-fi', help='Maximum number of feature images wanted, DEFAULT = 100', nargs='?', const=100, default=100,
+    #                     type=_utils.check_positive_int, required=False)
+    # parser.add_argument('-R', help='Energy R threshold, DEFAULT = 0.95', nargs='?', const=0.95, default=0.95,
+    #                     type=_utils.check_positive_float, required=False)
+    # parser.add_argument('-siw', help='Sigma weight for gaussian smoothing, DEFAULT = 0.5', nargs='?', const=0.5, default=0.5,
+    #                     type=float, required=False)
+    # parser.add_argument('-c', help='Output grey? True/False, DEFAULT = False', nargs='?', const=False, default=False,
+    #                     type=bool, required=False)
+    # parser.add_argument('-i', help='Print intermediate results (filtered/feature images)? True/False, DEFAULT = False', nargs='?', const=False, default=False,
+    #                     type=bool, required=False)
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    
 
-    IMG_ROOT = "../ARC_DATAS_RESIZE/QUARTER"
-    SAVE_ROOT = "../ARC_GABOR_OUTPUT/QUARTER"
+    args = {'spw': 1, 'gamma': 1, 'sigma': 1, 'psi': 0, 'vt': 0.001, 'fi': 100, 'R':0.95, 'siw':0.5, 'c': False, 'i': True}
+
+    IMG_ROOT = "../../ARC_DATAS_RESIZE/ONE_THIRD"
+    SAVE_ROOT = "../../ARC_DATAS_RESIZE/output"
     img_path_list = sorted(glob.glob(IMG_ROOT + "/*/*.jpg"))
 
-    k = 16
-    gk = 17
+    k = 3
+    gk = 256
     M = 35
-    for img_path in img_path_list:
+    for img_path in tqdm(img_path_list):
         foldername = os.path.basename(os.path.dirname(img_path))
         filename = os.path.basename(img_path)[:-4]
         save_dir = os.path.join(SAVE_ROOT, foldername)
@@ -370,5 +383,5 @@ def main():
         runGabor(img_path, save_path, k, gk, M, **args)
 
 if __name__ == "__main__": 
-    print("AAAA")
+    # print("AAAA")
     main()

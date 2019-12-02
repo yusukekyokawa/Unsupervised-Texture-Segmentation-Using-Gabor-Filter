@@ -8,10 +8,29 @@ import matplotlib.pyplot as pyplt
 import scipy.cluster.vq as vq
 import argparse
 import glob
+import os
+import functools
+from time import time
+import sys
 
-# We can specify these if need be.
+
+
+
+# # We can specify these if need be.
 brodatz = "D:\\ImageProcessing\\project\\OriginalBrodatz\\"
 concatOut = "D:\\ImageProcessing\\project\\concat.png"
+
+def stop_watch(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        funcName = func.__name__
+        start = time()
+        result = func(*args, **kwargs)
+        end = time()
+        print("Elapsed time of {} {:.5f}".format(funcName, (end - start)))
+        return result
+    return wrapper
+
 
 # This is the function that checks boundaries when performing spatial convolution.
 def getRanges_for_window_with_adjust(row, col, height, width, W):
@@ -95,9 +114,10 @@ def constructFeatureVectors(featureImages, img):
     return featureVectors
 
 # An extra function if we are looking to save our feature vectors for later
-def printFeatureVectors(outDir, featureVectors):
-
-    f = open(outDir, 'w')
+def printFeatureVectors(outDir, img_path, featureVectors):
+    filename = os.path.basename(img_path)[:-4]
+    txt_path = os.path.join(outDir, filename + ".txt")
+    f = open(txt_path, 'w')
     for vector in featureVectors:
         for item in vector:
             f.write(str(item) + " ")
@@ -119,14 +139,12 @@ def readInFeatureVectorsFromFile(dir):
     return newList
 
 # Print the intermediate results before clustering occurs
-def printFeatureImages(featureImages, naming, printlocation):
-
-    i =0
-    for image in featureImages:
+def printFeatureImages(featureImages, naming, printlocation, infile):
+    filename = os.path.basename(infile)[:-4]
+    for i, image in enumerate(featureImages):
         # Normalize to intensity values
         imageToPrint = cv2.normalize(image, image, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-        cv2.imwrite(printlocation + "\\" + naming + str(i) + ".png", imageToPrint)
-        i+=1
+        cv2.imwrite(printlocation + "/" + filename + naming + str(i) + ".png", imageToPrint)
 
 # Print the final result, the user can also choose to make the output grey
 def printClassifiedImage(labels, k, img, outdir, greyOutput):
@@ -142,6 +160,7 @@ def printClassifiedImage(labels, k, img, outdir, greyOutput):
         pyplt.imsave(outdir, labels.reshape(img.shape))
 
 # Call the k means algorithm for classification
+@stop_watch
 def clusterFeatureVectors(featureVectors, k):
 
     kmeans = clstr.KMeans(n_clusters=k)

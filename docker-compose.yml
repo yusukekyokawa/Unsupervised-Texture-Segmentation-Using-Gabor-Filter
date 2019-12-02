@@ -1,9 +1,10 @@
 version: "3"
 services:
-  jupyter:
+  jupyter_anil:
     build: .
     volumes:
-      - $PWD:/tmp/working
+      - ./:/tmp/working
+      - $PWD../ARC_DATAS_RESIZE:/ARC_DATAS_RESIZE
     working_dir: /tmp/working
     ports:
       - 8888:8888
