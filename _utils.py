@@ -20,6 +20,14 @@ import sys
 brodatz = "D:\\ImageProcessing\\project\\OriginalBrodatz\\"
 concatOut = "D:\\ImageProcessing\\project\\concat.png"
 
+def write_csv(funcName, time):
+    csv_path = os.path.join("../../../../../ARC_DATAS_RESIZE/experiment_20191205/", "func_ETA.csv")
+    if not os.path.isfile(csv_path):
+        with open(csv_path, "w") as f:
+            f.write("funcName,time" + "\n")
+    with open(csv_path, "a") as f:
+        f.write(funcName + "," + str(time) + "\n")
+
 def stop_watch(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -27,7 +35,9 @@ def stop_watch(func):
         start = time()
         result = func(*args, **kwargs)
         end = time()
-        print("Elapsed time of {} {:.5f}".format(funcName, (end - start)))
+        ETA = end - start
+        write_csv(funcName,ETA)
+        print("{},{:.5f}".format(funcName, ETA))
         return result
     return wrapper
 
@@ -72,6 +82,7 @@ def getRanges_for_window_with_adjust(row, col, height, width, W):
 # Whiten sets the variance to be 1 (unit variance),
 # spatial weighting also takes place here.
 # The mean can be subtracted if specified by the implementation.
+@stop_watch
 def normalizeData(featureVectors, setMeanToZero, spatialWeight=1):
 
     means = []
@@ -98,6 +109,7 @@ def normalizeData(featureVectors, setMeanToZero, spatialWeight=1):
     return copy
 
 # Create the feature vectors and add in row and column data
+@stop_watch
 def constructFeatureVectors(featureImages, img):
 
     featureVectors = []

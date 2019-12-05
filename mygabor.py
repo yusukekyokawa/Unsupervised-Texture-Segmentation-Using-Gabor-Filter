@@ -7,7 +7,13 @@ import os.path
 import glob
 import os
 from tqdm import tqdm
+import timeit
+import sys
+
 # A simple convolution function that returns the filtered images.
+
+
+
 @_utils.stop_watch
 def getFilterImages(filters, img):
     """
@@ -224,7 +230,7 @@ def centralPixelTangentCalculation_bruteForce(img, copy, row, col, alpha, L):
     copy[row][col] = sum/pow(L, 2)
 
 # Apply Gaussian with the central frequency specification
-@_utils.stop_watch
+# @_utils.stop_watch
 def applyGaussian(gaborImage, L, sigmaWeight, filter):
 
     height, N_c = gaborImage.shape
@@ -246,6 +252,7 @@ def applyGaussian(gaborImage, L, sigmaWeight, filter):
     return cv2.GaussianBlur(gaborImage, (L, L), sig), destroyImage
 
 # Remove feature images with variance lower than 0.0001
+@_utils.stop_watch
 def removeFeatureImagesWithSmallVariance(featureImages, threshold):
     toReturn =[]
     for image in featureImages:
@@ -257,6 +264,7 @@ def removeFeatureImagesWithSmallVariance(featureImages, threshold):
 
 
 # Our main driver function to return the segmentation of the input image.
+@_utils.stop_watch
 def runGabor(infile, outfile, k, gk, M, **args):
 
     # infile = args.infile
@@ -270,7 +278,7 @@ def runGabor(infile, outfile, k, gk, M, **args):
 
     M_transducerWindowSize = M
     if((M_transducerWindowSize % 2) == 0):
-        print('Gaussian window size not odd, using next odd number')
+        # print('Gaussian window size not odd, using next odd number')
         M_transducerWindowSize += 1
     # クラスタ数．何個に画像を分割するか
     k_clusters = k
@@ -289,6 +297,7 @@ def runGabor(infile, outfile, k, gk, M, **args):
     sigmaWeight = args['siw']
     greyOutput = args['c']
     printIntermediateResults = args['i'] 
+
     # 画像の読み込み
     img = cv2.imread(infile, cv2.IMREAD_GRAYSCALE)
     # lambdaの取得.サンプリングレートを決める．
@@ -296,7 +305,7 @@ def runGabor(infile, outfile, k, gk, M, **args):
     # ガボールフィルタの作成
     filters = build_filters(lambdas, k_gaborSize, gammaSigmaPsi)
 
-    print("Gabor kernels created, getting filtered images")
+    # print("Gabor kernels created, getting filtered images")
 
     # ガボールフィルタを入力画像にかける．
     filteredImages = getFilterImages(filters, img)
@@ -306,7 +315,7 @@ def runGabor(infile, outfile, k, gk, M, **args):
     if(printIntermediateResults):
         _utils.printFeatureImages(filteredImages, "filter", printlocation, infile)
 
-    print("Applying nonlinear transduction with Gaussian smoothing")
+    # print("Applying nonlinear transduction with Gaussian smoothing")
 
     featureImages = nonLinearTransducer(img, filteredImages, M_transducerWindowSize, sigmaWeight, filters)
     # 分散の小さいデータを除く．
@@ -322,66 +331,34 @@ def runGabor(infile, outfile, k, gk, M, **args):
     featureVectors = _utils.normalizeData(featureVectors, False, spatialWeight=spatialWeight)
     _utils.printFeatureVectors(printlocation, infile, featureVectors)
     
-    print("Clustering...")
+    # print("Clustering...")
     labels = _utils.clusterFeatureVectors(featureVectors, k_clusters)
     _utils.printClassifiedImage(labels, k_clusters, img, outfile, greyOutput)
 
 # For running the program on the command line
 def main():
-
-    # initialize
-    # parser = argparse.ArgumentParser()
-
-    # Required arguments
-    # parser.add_argument("-infile", required=True)
-    # parser.add_argument("-outfile", required=True)
-
-    # parser.add_argument('-k', help='Number of clusters', type=_utils.check_positive_int, required=True)
-    # parser.add_argument('-gk', help='Size of the gabor kernel', type=_utils.check_positive_int, required=True)
-    # parser.add_argument('-M', help='Size of the gaussian window', type=_utils.check_positive_int, required=True)
-
-    # # Optional arguments
-    # parser.add_argument('-spw', help='Spatial weight of the row and columns for clustering, DEFAULT = 1', nargs='?', const=1,
-    #                     type=_utils.check_positive_float, default=1, required=False)
-    # parser.add_argument('-gamma', help='Spatial aspect ratio, DEFAULT = 1', nargs='?', const=1, default=1,
-    #                     type=_utils.check_positive_float, required=False)
-    # parser.add_argument('-sigma', help='Spread of the filter, DEFAULT = 1', nargs='?', const=1, default=1,
-    #                     type=_utils.check_positive_float, required=False)
-    # parser.add_argument('-psi', help='Offset phase, DEFAULT = 0', nargs='?', const=0, default=0,
-    #                     type=_utils.check_positive_float, required=False)
-    # parser.add_argument('-vt', help='Variance Threshold, DEFAULT = 0.0001', nargs='?', const=0.0001, default=0.0001,
-    #                     type=_utils.check_positive_float, required=False)
-    # parser.add_argument('-fi', help='Maximum number of feature images wanted, DEFAULT = 100', nargs='?', const=100, default=100,
-    #                     type=_utils.check_positive_int, required=False)
-    # parser.add_argument('-R', help='Energy R threshold, DEFAULT = 0.95', nargs='?', const=0.95, default=0.95,
-    #                     type=_utils.check_positive_float, required=False)
-    # parser.add_argument('-siw', help='Sigma weight for gaussian smoothing, DEFAULT = 0.5', nargs='?', const=0.5, default=0.5,
-    #                     type=float, required=False)
-    # parser.add_argument('-c', help='Output grey? True/False, DEFAULT = False', nargs='?', const=False, default=False,
-    #                     type=bool, required=False)
-    # parser.add_argument('-i', help='Print intermediate results (filtered/feature images)? True/False, DEFAULT = False', nargs='?', const=False, default=False,
-    #                     type=bool, required=False)
-
-    # args = parser.parse_args()
-    
-
     args = {'spw': 1, 'gamma': 1, 'sigma': 1, 'psi': 0, 'vt': 0.001, 'fi': 100, 'R':0.95, 'siw':0.5, 'c': False, 'i': True}
+    IMG_ROOT = "../../ARC_DATAS_RESIZE/experiment_20191205/input"
+    k_list = [2, 3]
+    gk_list = [32, 64, 128, 256, 512]
+    M_list = [5, 10, 15, 20, 25, 30, 35]
+    for k in k_list:
+        for gk in gk_list:
+            for M in M_list:            
+                saveFolderName = "k_{}_gk_{}_M_{}".format(str(k), str(gk), str(M))
+                print(saveFolderName)
+                SAVE_ROOT = "../../ARC_DATAS_RESIZE/experiment_20191205/{}".format(saveFolderName)
+                img_path_list = sorted(glob.glob(IMG_ROOT + "/*.jpg"))
+                # csv_path = os.path.join(SAVE_ROOT, "{}func_ETA.csv".format(saveFolderName))
 
-    IMG_ROOT = "../../ARC_DATAS_RESIZE/ONE_THIRD"
-    SAVE_ROOT = "../../ARC_DATAS_RESIZE/output"
-    img_path_list = sorted(glob.glob(IMG_ROOT + "/*/*.jpg"))
-
-    k = 3
-    gk = 256
-    M = 35
-    for img_path in tqdm(img_path_list):
-        foldername = os.path.basename(os.path.dirname(img_path))
-        filename = os.path.basename(img_path)[:-4]
-        save_dir = os.path.join(SAVE_ROOT, foldername)
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = os.path.join(save_dir, filename + "_result.jpg")
-        runGabor(img_path, save_path, k, gk, M, **args)
-
+                for img_path in img_path_list:
+                    # foldername = os.path.basename(os.path.dirname(img_path))
+                    filename = os.path.basename(img_path)[:-4]
+                    print(filename)
+                    save_dir = os.path.join(SAVE_ROOT)
+                    os.makedirs(save_dir, exist_ok=True)
+                    save_path = os.path.join(save_dir, filename + "_result.jpg")
+                    runGabor(img_path, save_path, k, gk, M, **args)
 if __name__ == "__main__": 
     # print("AAAA")
     main()
